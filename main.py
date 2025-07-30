@@ -132,14 +132,14 @@ async def remove_background_file(
     mode: str = Query("fg-image", enum=["fg-image", "fg-mask", "fg-image-shadow"]),
     response_type: str = Query("json", enum=["json", "file"]),
     file: UploadFile = File(..., description="Image file to process"),
-    background_url: Optional[str] = Form(None, description="URL of background image")
+    background_file: Optional[UploadFile] = File(None, description="Background image file")
 ):
     # Parse form data manually to avoid FastAPI's automatic parsing of empty strings
     form_data = await request.form()
     
     # Extract values from form data (this handles empty strings gracefully)
     file = form_data.get("file")
-    background_url = form_data.get("background_url")
+    background_file = form_data.get("background_file")
     
     # Load image from file upload
     image_bytes = None
@@ -169,20 +169,14 @@ async def remove_background_file(
 
     # Prepare background if provided (completely optional)
     background = None
-    if background_url is not None and background_url.strip():
+    if background_file is not None and hasattr(background_file, 'filename') and background_file.filename and background_file.filename.strip():
         try:
-            bg_response = requests.get(background_url)
-            if bg_response.status_code == 200:
-                background = Image.open(BytesIO(bg_response.content)).convert("RGBA").resize(image.size)
-            else:
-                return JSONResponse({
-                    "status": "error",
-                    "message": "Failed to fetch background image from URL."
-                }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
+            bg_bytes = await background_file.read()
+            background = Image.open(BytesIO(bg_bytes)).convert("RGBA").resize(image.size)
         except Exception as e:
             return JSONResponse({
                 "status": "error",
-                "message": f"Error processing background URL: {str(e)}"
+                "message": f"Invalid background image file: {str(e)}"
             }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
 
     return process_background_removal(image, mode, response_type, background)
