@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Query, HTTPException, Form, status as fastapi_status
+from fastapi import FastAPI, File, UploadFile, Query, HTTPException, Form, status as fastapi_status, Request
 from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel
 from typing import Optional
@@ -39,18 +39,31 @@ def image_to_base64(img: Image.Image) -> str:
 
 @app.post("/remove-background")
 async def remove_background(
+    request: Request,
     mode: str = Query("fg-image", enum=["fg-image", "fg-mask", "fg-image-shadow"]),
-    response_type: str = Query("json", enum=["json", "file"]),
-    file: Optional[UploadFile] = None,
-    url: Optional[str] = None,
-    background_url: Optional[str] = None,
-    background_file: Optional[UploadFile] = None
+    response_type: str = Query("json", enum=["json", "file"])
 ):
+    # Parse form data manually to avoid FastAPI's automatic parsing
+    form_data = await request.form()
+    
+    # Extract values from form data
+    file = form_data.get("file")
+    url = form_data.get("url")
+    background_url = form_data.get("background_url")
+    background_file = form_data.get("background_file")
+    
     # Load image from file or URL
     image_bytes = None
     
-    if file is not None and hasattr(file, 'filename') and file.filename:
-        image_bytes = await file.read()
+    # Handle file upload - check if it's a valid file, not empty string
+    if file is not None and hasattr(file, 'filename') and file.filename and file.filename.strip():
+        try:
+            image_bytes = await file.read()
+        except Exception as e:
+            return JSONResponse({
+                "status": "error",
+                "message": f"Error reading uploaded file: {str(e)}"
+            }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
     elif url is not None and url.strip():
         try:
             response = requests.get(url)
@@ -69,7 +82,7 @@ async def remove_background(
     if not image_bytes:
         return JSONResponse({
             "status": "error",
-            "message": "No image provided. Please provide either a file upload or a valid URL."
+            "message": "No valid image provided. Please provide either a file upload or a valid URL."
         }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -87,7 +100,7 @@ async def remove_background(
 
     # Prepare background if provided (completely optional)
     background = None
-    if background_file is not None and hasattr(background_file, 'filename') and background_file.filename:
+    if background_file is not None and hasattr(background_file, 'filename') and background_file.filename and background_file.filename.strip():
         try:
             bg_bytes = await background_file.read()
             background = Image.open(BytesIO(bg_bytes)).convert("RGBA").resize(result.size)
