@@ -41,12 +41,16 @@ def image_to_base64(img: Image.Image) -> str:
 async def remove_background(
     request: Request,
     mode: str = Query("fg-image", enum=["fg-image", "fg-mask", "fg-image-shadow"]),
-    response_type: str = Query("json", enum=["json", "file"])
+    response_type: str = Query("json", enum=["json", "file"]),
+    file: Optional[UploadFile] = File(None, description="Image file to process"),
+    url: Optional[str] = Form(None, description="URL of image to process"),
+    background_url: Optional[str] = Form(None, description="URL of background image"),
+    background_file: Optional[UploadFile] = File(None, description="Background image file")
 ):
-    # Parse form data manually to avoid FastAPI's automatic parsing
+    # Parse form data manually to avoid FastAPI's automatic parsing of empty strings
     form_data = await request.form()
     
-    # Extract values from form data
+    # Extract values from form data (this handles empty strings gracefully)
     file = form_data.get("file")
     url = form_data.get("url")
     background_url = form_data.get("background_url")
