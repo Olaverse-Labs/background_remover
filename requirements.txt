@@ -3,4 +3,6 @@ uvicorn
 pillow
 opencv-python
 rembg
-requests 
+requests
+python-multipart
+onnxruntime 
