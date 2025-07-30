@@ -83,13 +83,11 @@ curl -X POST "http://localhost:8000/remove-background?mode=fg-image&response_typ
 
 1. Install dependencies:
    ```bash
-   python -m venv venv
-   venv\Scripts\activate  # On Windows
    pip install -r requirements.txt
    ```
 2. Run the server:
    ```bash
-   venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000
+   uvicorn main:app --host 0.0.0.0 --port 8000
    ```
 3. Visit [http://localhost:8000/docs](http://localhost:8000/docs) for Swagger UI.
 
@@ -103,4 +101,27 @@ curl -X POST "http://localhost:8000/remove-background?mode=fg-image&response_typ
    ```bash
    docker run -p 8000:8000 background-remover-api
    ```
-3. Access the API at [http://localhost:8000](http://localhost:8000) 
+3. Access the API at [http://localhost:8000](http://localhost:8000)
+
+## Hosting Options
+
+### Railway
+1. Connect your GitHub repository to Railway
+2. Railway will automatically detect the Python project and install dependencies
+3. Set the start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+
+### Render
+1. Connect your GitHub repository to Render
+2. Create a new Web Service
+3. Set the build command: `pip install -r requirements.txt`
+4. Set the start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+
+### Heroku
+1. Connect your GitHub repository to Heroku
+2. Heroku will automatically detect the Python project
+3. The `requirements.txt` file will be used to install dependencies
+
+### DigitalOcean App Platform
+1. Connect your GitHub repository to DigitalOcean App Platform
+2. Select Python as the runtime
+3. Set the run command: `uvicorn main:app --host 0.0.0.0 --port $PORT` 
