@@ -41,23 +41,32 @@ def image_to_base64(img: Image.Image) -> str:
 async def remove_background(
     mode: str = Query("fg-image", enum=["fg-image", "fg-mask", "fg-image-shadow"]),
     response_type: str = Query("json", enum=["json", "file"]),
-    file: Optional[UploadFile] = File(default=None),
-    url: Optional[str] = Form(default=None),
-    background_url: Optional[str] = Form(default=None),
-    background_file: Optional[UploadFile] = File(default=None)
+    file: Optional[UploadFile] = None,
+    url: Optional[str] = None,
+    background_url: Optional[str] = None,
+    background_file: Optional[UploadFile] = None
 ):
     # Load image from file or URL
-    if file and file.filename:
+    image_bytes = None
+    
+    if file is not None and hasattr(file, 'filename') and file.filename:
         image_bytes = await file.read()
-    elif url and url.strip():
-        response = requests.get(url)
-        if response.status_code != 200:
+    elif url is not None and url.strip():
+        try:
+            response = requests.get(url)
+            if response.status_code != 200:
+                return JSONResponse({
+                    "status": "error",
+                    "message": "Failed to fetch image from URL."
+                }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
+            image_bytes = response.content
+        except Exception as e:
             return JSONResponse({
                 "status": "error",
-                "message": "Failed to fetch image from URL."
+                "message": f"Error fetching image from URL: {str(e)}"
             }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
-        image_bytes = response.content
-    else:
+    
+    if not image_bytes:
         return JSONResponse({
             "status": "error",
             "message": "No image provided. Please provide either a file upload or a valid URL."
@@ -76,9 +85,9 @@ async def remove_background(
     alpha = result.split()[-1]
     bbox = get_bounding_box(alpha)
 
-    # Prepare background if provided
+    # Prepare background if provided (completely optional)
     background = None
-    if background_file and background_file.filename:
+    if background_file is not None and hasattr(background_file, 'filename') and background_file.filename:
         try:
             bg_bytes = await background_file.read()
             background = Image.open(BytesIO(bg_bytes)).convert("RGBA").resize(result.size)
@@ -87,7 +96,7 @@ async def remove_background(
                 "status": "error",
                 "message": f"Invalid background image file: {str(e)}"
             }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
-    elif background_url and background_url.strip():
+    elif background_url is not None and background_url.strip():
         try:
             bg_response = requests.get(background_url)
             if bg_response.status_code == 200:
@@ -103,8 +112,10 @@ async def remove_background(
                 "message": f"Error processing background URL: {str(e)}"
             }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
 
+    # Process based on mode
     if mode == "fg-image":
         output_image = result
+        # Only apply background if one was provided
         if background:
             output_image = Image.alpha_composite(background, output_image)
         width, height = output_image.size
@@ -155,6 +166,7 @@ async def remove_background(
         shadow.paste((0, 0, 0, 100), box=shadow_offset, mask=shadow_alpha)
         shadowed = Image.alpha_composite(shadow, result)
         output_image = shadowed
+        # Only apply background if one was provided
         if background:
             output_image = Image.alpha_composite(background, output_image)
         width, height = output_image.size
