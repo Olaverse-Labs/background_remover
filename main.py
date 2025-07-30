@@ -132,7 +132,6 @@ async def remove_background_file(
     mode: str = Query("fg-image", enum=["fg-image", "fg-mask", "fg-image-shadow"]),
     response_type: str = Query("json", enum=["json", "file"]),
     file: UploadFile = File(..., description="Image file to process"),
-    background_file: Optional[UploadFile] = File(None, description="Background image file"),
     background_url: Optional[str] = Form(None, description="URL of background image")
 ):
     # Parse form data manually to avoid FastAPI's automatic parsing of empty strings
@@ -141,7 +140,6 @@ async def remove_background_file(
     # Extract values from form data (this handles empty strings gracefully)
     file = form_data.get("file")
     background_url = form_data.get("background_url")
-    background_file = form_data.get("background_file")
     
     # Load image from file upload
     image_bytes = None
@@ -186,15 +184,6 @@ async def remove_background_file(
                 "status": "error",
                 "message": f"Error processing background URL: {str(e)}"
             }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
-    elif background_file is not None and hasattr(background_file, 'filename') and background_file.filename and background_file.filename.strip():
-        try:
-            bg_bytes = await background_file.read()
-            background = Image.open(BytesIO(bg_bytes)).convert("RGBA").resize(image.size)
-        except Exception as e:
-            return JSONResponse({
-                "status": "error",
-                "message": f"Invalid background image file: {str(e)}"
-            }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
 
     return process_background_removal(image, mode, response_type, background)
 
@@ -204,8 +193,7 @@ async def remove_background_url(
     mode: str = Query("fg-image", enum=["fg-image", "fg-mask", "fg-image-shadow"]),
     response_type: str = Query("json", enum=["json", "file"]),
     url: str = Form(..., description="URL of image to process"),
-    background_url: Optional[str] = Form(None, description="URL of background image"),
-    background_file: Optional[UploadFile] = File(None, description="Background image file")
+    background_url: Optional[str] = Form(None, description="URL of background image")
 ):
     # Parse form data manually to avoid FastAPI's automatic parsing of empty strings
     form_data = await request.form()
@@ -213,7 +201,6 @@ async def remove_background_url(
     # Extract values from form data (this handles empty strings gracefully)
     url = form_data.get("url")
     background_url = form_data.get("background_url")
-    background_file = form_data.get("background_file")
     
     # Load image from URL
     image_bytes = None
@@ -263,15 +250,6 @@ async def remove_background_url(
             return JSONResponse({
                 "status": "error",
                 "message": f"Error processing background URL: {str(e)}"
-            }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
-    elif background_file is not None and hasattr(background_file, 'filename') and background_file.filename and background_file.filename.strip():
-        try:
-            bg_bytes = await background_file.read()
-            background = Image.open(BytesIO(bg_bytes)).convert("RGBA").resize(image.size)
-        except Exception as e:
-            return JSONResponse({
-                "status": "error",
-                "message": f"Invalid background image file: {str(e)}"
             }, status_code=fastapi_status.HTTP_400_BAD_REQUEST)
 
     return process_background_removal(image, mode, response_type, background)
