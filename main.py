@@ -41,10 +41,10 @@ def image_to_base64(img: Image.Image) -> str:
 async def remove_background(
     mode: str = Query("fg-image", enum=["fg-image", "fg-mask", "fg-image-shadow"]),
     response_type: str = Query("json", enum=["json", "file"]),
-    file: Optional[UploadFile] = File(None),
-    url: Optional[str] = Form(None),
-    background_url: Optional[str] = Form(None),
-    background_file: Optional[UploadFile] = File(None)
+    file: Optional[UploadFile] = File(default=None),
+    url: Optional[str] = Form(default=None),
+    background_url: Optional[str] = Form(default=None),
+    background_file: Optional[UploadFile] = File(default=None)
 ):
     # Load image from file or URL
     if file and file.filename:
