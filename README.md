@@ -1,5 +1,7 @@
 # Background Remover API
 
+[![Olaverse API](https://img.shields.io/badge/Olaverse-API%20Doc-blue?style=flat-square)](https://www.olaverse.co.uk/background-remover-api) [![Try on Vibeland](https://img.shields.io/badge/Vibeland-Try%20Live-orange?style=flat-square)](https://www.vibeland.co.uk/tools/background-remover)
+
 A FastAPI-based service to remove backgrounds from images, return bounding boxes, and optionally blend with a new background. Supports file upload and URL input for both foreground and background images.
 
 ## Features
